@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
+apply plugin: 'kotlinx-serialization'
 
 ext {
     extName = 'KickAssAnime'
@@ -19,4 +20,8 @@ android {
         versionCode extVersionCode
         versionName "1.0.${extVersionCode}"
     }
+}
+
+dependencies {
+    compileOnly libs.bundles.common
 }
