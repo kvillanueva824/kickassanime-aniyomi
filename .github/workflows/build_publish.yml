@@ -29,11 +29,17 @@ jobs:
         run: |
           gh repo clone aniyomiorg/aniyomi-extensions monorepo -- --depth=1
 
-      - name: Inject KickAssAnime extension
+      -- name: Inject KickAssAnime extension
         run: |
           mkdir -p monorepo/src/en/kickassanime
           rsync -a --exclude='.github' --exclude='monorepo' . monorepo/src/en/kickassanime/
 
+      - name: Warm up JitPack for injekt
+        run: |
+          curl -s "https://jitpack.io/com/github/inorichi/injekt/injekt-core/65b0440/injekt-core-65b0440.jar" -o /dev/null || true
+          sleep 15
+          curl -s "https://jitpack.io/com/github/inorichi/injekt/injekt-core/65b0440/injekt-core-65b0440.pom" -o /dev/null || true
+          sleep 10
       - name: Build APK
         working-directory: monorepo
         env:
