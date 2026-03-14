@@ -36,6 +36,8 @@ jobs:
 
       - name: Build APK
         working-directory: monorepo
+        env:
+          CI_CHUNK_SIZE: 65
         run: ./gradlew :src:en:kickassanime:assembleRelease --no-daemon
 
       - name: Sign APK
