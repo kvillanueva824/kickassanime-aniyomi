@@ -10,6 +10,7 @@ ext {
 }
 
 android {
+    namespace 'eu.kanade.tachiyomi.animeextension.en.kickassanime'
     compileSdkVersion AndroidConfig.compileSdk
     defaultConfig {
         minSdkVersion AndroidConfig.minSdk
