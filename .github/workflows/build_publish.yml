@@ -1,0 +1,116 @@
+name: Build & Publish Extension
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Clone aniyomi-extensions scaffold
+        run: |
+          git clone --filter=blob:none --no-checkout \
+            https://github.com/yuzono/aniyomi-extensions.git monorepo
+          cd monorepo
+          git sparse-checkout init --cone
+          git sparse-checkout set \
+            buildSrc \
+            core \
+            lib \
+            gradle \
+            common.gradle \
+            build.gradle \
+            settings.gradle.kts
+          git checkout
+
+      - name: Inject KickAssAnime extension
+        run: |
+          mkdir -p monorepo/src/en/kickassanime
+          rsync -a --exclude='.github' --exclude='monorepo' . monorepo/src/en/kickassanime/
+
+      - name: Build APK
+        working-directory: monorepo
+        run: ./gradlew :src:en:kickassanime:assembleRelease --no-daemon
+
+      - name: Sign APK
+        working-directory: monorepo
+        run: |
+          APK=$(find src/en/kickassanime/build/outputs/apk/release -name "*.apk" | head -1)
+          echo "Found APK: $APK"
+          if [ ! -f "$HOME/keystore.jks" ]; then
+            keytool -genkeypair -v \
+              -keystore "$HOME/keystore.jks" \
+              -alias aniyomi \
+              -keyalg RSA -keysize 2048 \
+              -validity 10000 \
+              -storepass android \
+              -keypass android \
+              -dname "CN=KickAssAnime, OU=Extensions, O=Personal, L=Unknown, S=Unknown, C=US"
+          fi
+          $ANDROID_SDK_ROOT/build-tools/$(ls $ANDROID_SDK_ROOT/build-tools | tail -1)/apksigner sign \
+            --ks "$HOME/keystore.jks" \
+            --ks-key-alias aniyomi \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --out signed-kickassanime.apk \
+            "$APK"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kickassanime-apk
+          path: monorepo/signed-kickassanime.apk
+
+      - name: Publish to repo branch
+        run: |
+          APK="monorepo/signed-kickassanime.apk"
+          VERSION_CODE=1
+          RAW_URL="https://raw.githubusercontent.com/${{ github.repository }}/repo/apk/kickassanime-en.apk"
+          cat > index.min.json <<EOF
+          [
+            {
+              "name": "KickAssAnime",
+              "pkg": "eu.kanade.tachiyomi.animeextension.en.kickassanime",
+              "apk": "kickassanime-en.apk",
+              "lang": "en",
+              "code": ${VERSION_CODE},
+              "version": "1.0.${VERSION_CODE}",
+              "nsfw": 0,
+              "sources": [
+                {
+                  "id": "kickassanime_en",
+                  "lang": "en",
+                  "name": "KickAssAnime",
+                  "baseUrl": "https://kickassanime.am",
+                  "versionId": 1
+                }
+              ]
+            }
+          ]
+          EOF
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin repo 2>/dev/null || true
+          git checkout repo 2>/dev/null || git checkout --orphan repo
+          mkdir -p apk
+          cp "$APK" apk/kickassanime-en.apk
+          cp index.min.json index.min.json
+          git add apk/kickassanime-en.apk index.min.json
+          git commit -m "chore: publish KickAssAnime extension (build ${{ github.run_number }})" || echo "Nothing to commit"
+          git push origin repo

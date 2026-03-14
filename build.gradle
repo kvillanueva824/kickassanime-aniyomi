@@ -1,0 +1,21 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+ext {
+    extName = 'KickAssAnime'
+    pkgNameSuffix = 'en.kickassanime'
+    extClass = '.KickAssAnime'
+    extVersionCode = 1
+    libVersion = '13'
+}
+
+android {
+    compileSdkVersion AndroidConfig.compileSdk
+    defaultConfig {
+        minSdkVersion AndroidConfig.minSdk
+        targetSdkVersion AndroidConfig.targetSdk
+        applicationId 'eu.kanade.tachiyomi.animeextension'
+        versionCode extVersionCode
+        versionName "1.0.${extVersionCode}"
+    }
+}
