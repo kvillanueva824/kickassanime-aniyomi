@@ -24,9 +24,10 @@ jobs:
           cache: gradle
 
       - name: Clone aniyomi-extensions scaffold
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git clone --depth=1 \
-            git://github.com/aniyomiorg/aniyomi-extensions.git monorepo
+          gh repo clone aniyomiorg/aniyomi-extensions monorepo -- --depth=1
 
       - name: Inject KickAssAnime extension
         run: |
@@ -66,7 +67,6 @@ jobs:
 
       - name: Publish to repo branch
         run: |
-          VERSION_CODE=1
           cat > index.min.json <<INDEXEOF
           [
             {
